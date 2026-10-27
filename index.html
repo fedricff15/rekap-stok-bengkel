@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1953d6"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icon.svg">
+<title>Rekap Stok Bengkel</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{--bg:#f5f7fb;--surface:#fff;--ink:#172033;--muted:#667085;--line:#e1e7f0;--primary:#1953d6;--primary-ink:#fff;--warning:#b45309;--danger:#b42318;--safe:#087443;--soft:#eef3ff}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}.app{max-width:1180px;margin:auto;padding:32px 20px 48px}.top{display:flex;align-items:start;justify-content:space-between;gap:18px;margin-bottom:26px}h1{font-size:28px;margin:0 0 6px}h2{font-size:17px;margin:0 0 14px}p{margin:0}.subtle{color:var(--muted)}.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0;box-shadow:0 3px 12px rgba(20,35,70,.04)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}.stat span{display:block;color:var(--muted);font-size:13px}.stat strong{font-size:27px;display:block;margin-top:5px}.stat.attention strong{color:var(--danger)}.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.drop{border:1.5px dashed #9eb5e8;border-radius:10px;background:#f8faff;min-height:148px;display:grid;place-items:center;text-align:center;padding:20px}.drop input{max-width:100%}textarea,input{width:100%;font:inherit;border:1px solid #cbd5e1;border-radius:8px;padding:10px;color:var(--ink);background:#fff}textarea{min-height:148px;resize:vertical}label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}button,.file-button{border:0;border-radius:8px;padding:10px 14px;font:600 14px/1.2 inherit;cursor:pointer;background:var(--soft);color:var(--primary);display:inline-flex;align-items:center;gap:7px}button.primary{background:var(--primary);color:var(--primary-ink)}button.danger{color:var(--danger)}button:disabled{opacity:.55;cursor:wait}.file-button input{display:none}.progress{height:8px;background:#e9edf5;border-radius:10px;overflow:hidden;margin-top:10px}.progress div{height:100%;width:0;background:var(--primary);transition:width .2s}.progress[hidden],.notice[hidden]{display:none}.notice{margin-top:10px;padding:10px 12px;background:#fff6e9;border-radius:8px;color:#8a4d00}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}td input{padding:7px;min-width:85px}td:first-child input{min-width:160px}.num{text-align:right}.badge{display:inline-block;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700}.safe{background:#e7f6ed;color:var(--safe)}.low{background:#fff4dc;color:var(--warning)}.out{background:#fee9e8;color:var(--danger)}.empty{text-align:center;color:var(--muted);padding:28px}.footer{color:var(--muted);font-size:13px;margin-top:18px}@media(max-width:720px){.top{display:block}.stats{grid-template-columns:repeat(2,1fr)}.input-grid{grid-template-columns:1fr}.app{padding:22px 14px}}@media(max-width:420px){.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="top"><div><h1>Rekap Stok Bengkel</h1><p class="subtle">Impor teks, CSV, atau foto daftar stok lalu periksa dan simpan rekapnya.</p></div><div class="actions" style="margin-top:0"><button id="install-btn" hidden>Pasang aplikasi</button><button id="export-btn">Unduh CSV</button></div></header>
+<section class="stats" aria-live="polite">
+<div class="stat"><span>Jenis barang</span><strong id="total-items">0</strong></div>
+<div class="stat"><span>Stok aman</span><strong id="safe-items">0</strong></div>
+<div class="stat attention"><span>Menipis atau habis</span><strong id="attention-items">0</strong></div>
+<div class="stat attention"><span>Stok habis</span><strong id="out-items">0</strong></div>
+</section>
+<section class="panel">
+<h2>Masukkan data</h2>
+<div class="input-grid">
+<div><label for="raw-text">Teks atau CSV</label><textarea id="raw-text" placeholder="Barang,Kategori,Stok,Minimum,Satuan&#10;Oli mesin,Pelumas,12,5,botol&#10;Kampas rem,Sistem rem,3,5,set"></textarea></div>
+<div class="drop"><div><label class="file-button">Pilih foto daftar stok<input id="image-input" type="file" accept="image/*" capture="environment"></label><p class="subtle">Foto tabel atau catatan stok akan dibaca otomatis.</p></div></div>
+</div>
+<div class="actions"><button class="primary" id="process-btn">Proses data</button><button id="example-btn">Muat contoh</button><button id="clear-btn" class="danger">Hapus semua</button><span class="subtle" id="ocr-status"></span></div>
+<div class="progress" id="ocr-progress" hidden><div id="progress-fill"></div></div>
+<p class="notice" id="notice" hidden></p>
+</section>
+<section class="panel">
+<h2>Rekap dan koreksi</h2>
+<div class="table-wrap"><table><thead><tr><th>Barang</th><th>Kategori</th><th class="num">Stok</th><th class="num">Minimum</th><th>Satuan</th><th>Status</th><th></th></tr></thead><tbody id="stock-body"><tr><td colspan="7" class="empty">Belum ada data stok.</td></tr></tbody></table></div>
+<div class="actions"><button id="add-row-btn">Tambah baris</button><button class="primary" id="save-btn">Simpan perubahan</button></div>
+</section>
+<p class="footer">Status menipis muncul saat stok sama dengan atau di bawah batas minimum. Hasil foto sebaiknya diperiksa sebelum disimpan. Saat sudah diunggah ke internet, gunakan tombol Pasang aplikasi untuk menaruhnya di layar utama ponsel.</p>
+</main>
+<script>
+(() => {
+const sample=`Barang,Kategori,Stok,Minimum,Satuan
+Oli mesin,Pelumas,12,5,botol
+Kampas rem,Sistem rem,3,5,set
+Busi,Mesin,0,4,pcs
+Filter udara,Mesin,8,3,pcs
+Ban motor,Ban,2,2,pcs`;
+const els={raw:document.querySelector('#raw-text'),image:document.querySelector('#image-input'),process:document.querySelector('#process-btn'),example:document.querySelector('#example-btn'),clear:document.querySelector('#clear-btn'),body:document.querySelector('#stock-body'),total:document.querySelector('#total-items'),safe:document.querySelector('#safe-items'),attention:document.querySelector('#attention-items'),out:document.querySelector('#out-items'),notice:document.querySelector('#notice'),status:document.querySelector('#ocr-status'),progress:document.querySelector('#ocr-progress'),fill:document.querySelector('#progress-fill'),add:document.querySelector('#add-row-btn'),save:document.querySelector('#save-btn'),export:document.querySelector('#export-btn'),install:document.querySelector('#install-btn')};
+let items=[];let installEvent=null;
+const esc=value=>{const node=document.createElement('div');node.textContent=String(value??'');return node.innerHTML};
+const clean=value=>String(value??'').trim().replace(/\s+/g,' ');
+const valid=value=>Number.isFinite(Number(value))&&Number(value)>=0;
+function setNotice(message){els.notice.textContent=message;els.notice.hidden=!message}
+function state(item){return Number(item.stock)===0?'Habis':Number(item.stock)<=Number(item.minimum)?'Menipis':'Aman'}
+function saveLocal(){try{localStorage.setItem('rekap-stok-bengkel',JSON.stringify(items))}catch{}}
+function readLocal(){try{const saved=JSON.parse(localStorage.getItem('rekap-stok-bengkel'));if(Array.isArray(saved))items=saved}catch{}}
+function parse(text){
+ const lines=text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);if(!lines.length)return{rows:[],errors:[]};
+ const start=/^(barang|nama barang|item)\s*[,;\t]/i.test(lines[0])?1:0,rows=[],errors=[];
+ lines.slice(start).forEach((line,index)=>{
+  const parts=line.split(/[,;\t]/).map(clean);
+  let name='',category='-',stock='',minimum='',unit='pcs';
+  if(parts.length>=5)[name,category,stock,minimum,unit]=parts;
+  else if(parts.length===4)[name,category,stock,minimum]=parts;
+  else {const match=line.replace(/^[-*#]\s*/,'').match(/^(.*?)[\s,;]+(\d+)[\s,;]+(\d+)(?:[\s,;]+([A-Za-z]+))?$/);if(match){name=clean(match[1]);stock=match[2];minimum=match[3];unit=match[4]||'pcs'}}
+  if(!name||!valid(stock)||!valid(minimum))errors.push(index+start+1);else rows.push({name,category:category||'-',stock:Number(stock),minimum:Number(minimum),unit:unit||'pcs'});
+ });
+ return{rows,errors};
+}
+function render(){
+ const order={Habis:0,Menipis:1,Aman:2};const sorted=[...items].sort((a,b)=>order[state(a)]-order[state(b)]||a.name.localeCompare(b.name,'id'));
+ const safe=sorted.filter(item=>state(item)==='Aman').length,out=sorted.filter(item=>state(item)==='Habis').length;
+ els.total.textContent=sorted.length;els.safe.textContent=safe;els.attention.textContent=sorted.length-safe;els.out.textContent=out;
+ if(!sorted.length){els.body.innerHTML='<tr><td colspan="7" class="empty">Belum ada data stok.</td></tr>';return}
+ els.body.innerHTML=sorted.map((item,index)=>{const current=state(item),badge=current==='Aman'?'safe':current==='Menipis'?'low':'out';return `<tr data-index="${index}"><td><input data-field="name" value="${esc(item.name)}"></td><td><input data-field="category" value="${esc(item.category)}"></td><td class="num"><input data-field="stock" type="number" min="0" value="${item.stock}"></td><td class="num"><input data-field="minimum" type="number" min="0" value="${item.minimum}"></td><td><input data-field="unit" value="${esc(item.unit)}"></td><td><span class="badge ${badge}">${current}</span></td><td><button class="danger remove-row" data-index="${index}">Hapus</button></td></tr>`}).join('');
+}
+function collect(){const updated=[];els.body.querySelectorAll('tr[data-index]').forEach(row=>{const get=field=>row.querySelector(`[data-field="${field}"]`).value;const item={name:clean(get('name')),category:clean(get('category'))||'-',stock:Number(get('stock')),minimum:Number(get('minimum')),unit:clean(get('unit'))||'pcs'};if(item.name&&valid(item.stock)&&valid(item.minimum))updated.push(item)});items=updated}
+function processText(){const result=parse(els.raw.value);items=result.rows;saveLocal();render();setNotice(result.errors.length?`${result.rows.length} baris dimasukkan. Baris ${result.errors.join(', ')} tidak terbaca dan dilewati.`:`${result.rows.length} barang berhasil direkap.`)}
+async function scanImage(file){
+ if(!window.Tesseract){setNotice('Komponen pembaca foto belum tersedia. Coba lagi saat tersambung ke internet atau masukkan teks.');return}
+ els.process.disabled=true;els.status.textContent='Membaca foto...';els.progress.hidden=false;els.fill.style.width='0%';setNotice('');
+ try{const result=await Tesseract.recognize(file,'eng',{logger:message=>{if(message.status==='recognizing text'&&message.progress){els.fill.style.width=`${Math.round(message.progress*100)}%`;els.status.textContent=`Membaca foto ${Math.round(message.progress*100)}%`}}});els.raw.value=result.data.text;processText();els.status.textContent='Foto selesai dibaca.'}catch{setNotice('Foto tidak berhasil dibaca. Coba foto yang lebih tajam atau masukkan teksnya.');els.status.textContent=''}finally{els.process.disabled=false;els.progress.hidden=true}
+}
+els.process.addEventListener('click',processText);
+els.example.addEventListener('click',()=>{els.raw.value=sample;processText()});
+els.clear.addEventListener('click',()=>{items=[];els.raw.value='';saveLocal();render();setNotice('')});
+els.image.addEventListener('change',event=>{const file=event.target.files[0];if(file)scanImage(file)});
+els.add.addEventListener('click',()=>{collect();items.push({name:'Barang baru',category:'-',stock:0,minimum:0,unit:'pcs'});render()});
+els.save.addEventListener('click',()=>{collect();saveLocal();render();setNotice('Perubahan disimpan di browser ini.')});
+els.body.addEventListener('click',event=>{const button=event.target.closest('.remove-row');if(!button)return;collect();items.splice(Number(button.dataset.index),1);saveLocal();render()});
+els.export.addEventListener('click',()=>{collect();const data=['Barang,Kategori,Stok,Minimum,Satuan',...items.map(item=>[item.name,item.category,item.stock,item.minimum,item.unit].map(value=>`"${String(value).replace(/"/g,'""')}"`).join(','))].join('\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));link.download='rekap-stok-bengkel.csv';link.click();URL.revokeObjectURL(link.href)});
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installEvent=event;els.install.hidden=false});els.install.addEventListener('click',async()=>{if(!installEvent)return;installEvent.prompt();await installEvent.userChoice;installEvent=null;els.install.hidden=true});window.addEventListener('appinstalled',()=>{els.install.hidden=true;els.status.textContent='Aplikasi sudah terpasang.'});if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));readLocal();render();
+})();
+</script>
+</body>
+</html>
