@@ -1,0 +1,13 @@
+{
+  "name": "Rekap Stok Bengkel",
+  "short_name": "Stok Bengkel",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#1953d6",
+  "lang": "id",
+  "description": "Rekap stok bengkel dari teks, CSV, atau foto.",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
